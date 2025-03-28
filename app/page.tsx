@@ -20,6 +20,7 @@ import {
   StarOff,
   Bookmark,
   Share2,
+  Clipboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { automaticallyApplyForJob, scrapeJobsFromIndeed } from "./api";
 
 const Page: React.FC = () => {
   const [jobName, setJobName] = useState<string>("");
@@ -67,79 +69,21 @@ const Page: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [savedJobs, setSavedJobs] = useState<number[]>([]);
 
-  const scrapeJobs = async () => {
-    try {
-      setIsLoading(true);
-      if (jobName !== "" && jobLocation !== "") {
-        let scrapedCount = 0;
-
-        if (stepstone) {
-          scrapedCount++;
-        }
-        if (xing) {
-          scrapedCount++;
-        }
-        if (agentur) {
-          scrapedCount++;
-        }
-
-        if (scrapedCount > 0) {
-          toast.success(
-            `Searching jobs from ${scrapedCount} platform${
-              scrapedCount > 1 ? "s" : ""
-            }`
-          );
-          await getScrappedJobs();
-        } else {
-          toast.error("Please select at least one job platform");
-        }
-      } else {
-        toast.error("Please provide both job title and location");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to search jobs");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getAverageSalaryForJob = async () => {
-    try {
-      setIsLoading(true);
-      setAverageSalary("");
-      if (!jobName) {
-        toast.error("Please enter a job title");
-        return;
-      }
-
-      setAverageSalary(averageSalary);
-    } catch (error) {
-      console.log(error);
-      toast.error("Failed to get average salary");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getScrappedJobs = async () => {
-    try {
-      setIsLoading(true);
-
-      setResultCount(resultCount);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to fetch jobs");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const toggleDescription = (index: number) => {
     setExpandedJobs((prevState) => ({
       ...prevState,
       [index]: !prevState[index],
     }));
+  };
+
+  const ScrapeJobsFromIndeed = async () => {
+    try {
+      const response = await scrapeJobsFromIndeed(jobName, jobLocation);
+      setScrappedJobs(response);
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
   };
 
   return (
@@ -153,7 +97,7 @@ const Page: React.FC = () => {
               <div className="bg-purple-600 rounded-full p-2">
                 <img
                   className="w-8 h-8"
-                  src="/Images/Logo_for_Software_Jobfusion__a_platform_for_web_scraping_jobs-removebg-preview.png"
+                  src="/Logo_for_Software_Jobfusion__a_platform_for_web_scraping_jobs-removebg-preview.png"
                   alt="JobFusion Logo"
                 />
               </div>
@@ -232,7 +176,9 @@ const Page: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row gap-3 justify-end">
               <Button
-                onClick={scrapeJobs}
+                onClick={() => {
+                  ScrapeJobsFromIndeed();
+                }}
                 className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
                 disabled={isLoading}
               >
@@ -248,19 +194,11 @@ const Page: React.FC = () => {
                   </>
                 )}
               </Button>
-              <Button
-                onClick={() => {
-                  getScrappedJobs();
-                }}
-                className="w-full sm:w-auto bg-gray-700 hover:bg-gray-600 text-white"
-              >
-                Load Jobs
-              </Button>
+
               <Dialog>
                 <DialogTrigger asChild>
                   <Button
                     className="w-full sm:w-auto bg-pink-600 hover:bg-pink-700 text-white"
-                    onClick={getAverageSalaryForJob}
                     disabled={isLoading}
                   >
                     <BarChart3 className="mr-2 h-4 w-4" />
@@ -356,18 +294,21 @@ const Page: React.FC = () => {
               <TabsList className="mb-4 bg-gray-800 border border-gray-700">
                 <TabsTrigger
                   value="grid"
-                  className="data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-white"
                 >
                   Grid View
                 </TabsTrigger>
                 <TabsTrigger
                   value="list"
-                  className="data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-white"
                 >
                   List View
                 </TabsTrigger>
               </TabsList>
             </div>
+            <Button className="bg-purple-600 hover:bg-purple-600">
+              Download all Job Links
+            </Button>
 
             <TabsContent value="grid">
               <ScrollArea className="h-[calc(100vh-400px)] w-full pr-4">
@@ -387,7 +328,7 @@ const Page: React.FC = () => {
                       >
                         <CardHeader className="pb-2 relative">
                           <CardTitle className="text-lg font-bold line-clamp-2 text-gray-100 pr-8">
-                            {job.jobTitle}
+                            {job.title}
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -396,22 +337,19 @@ const Page: React.FC = () => {
                               <Building className="h-4 w-4 text-gray-400" />
                               <span className="font-medium">{job.company}</span>
                             </p>
-                            <p className="flex items-center gap-2 text-sm text-gray-300">
-                              <MapIcon className="h-4 w-4 text-gray-400" />
-                              <span>{job.ort}</span>
-                            </p>
-                            {job.gehalt && (
+
+                            {job.payment && (
                               <p className="flex items-center gap-2 text-sm text-gray-300">
                                 <DollarSign className="h-4 w-4 text-gray-400" />
                                 <span className="text-purple-400 font-medium">
-                                  {job.gehalt}
+                                  {job.payment}
                                 </span>
                               </p>
                             )}
-                            {job.homeOffice && (
+                            {job.JobType && (
                               <p className="flex items-center gap-2 text-sm text-gray-300">
                                 <Home className="h-4 w-4 text-gray-400" />
-                                <span>{job.homeOffice}</span>
+                                <span>{job.JobType}</span>
                               </p>
                             )}
                           </div>
@@ -456,12 +394,24 @@ const Page: React.FC = () => {
                               View Job
                             </a>
                           </Button>
+                          <Button
+                            onClick={() => {
+                              automaticallyApplyForJob();
+                            }}
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                            asChild
+                          >
+                            <h1>
+                              <Clipboard className="mr-2 h-4 w-4" />
+                              Apply for Job
+                            </h1>
+                          </Button>
                           <div className="flex justify-between items-center">
                             <Badge
                               variant="outline"
                               className="text-xs bg-gray-900/50 text-gray-300 border-gray-700"
                             >
-                              {job.type}
+                              {job.JobType}
                             </Badge>
                           </div>
                         </CardFooter>
@@ -492,7 +442,7 @@ const Page: React.FC = () => {
                           <div className="flex-1">
                             <div className="flex justify-between items-start mb-2">
                               <h3 className="text-lg font-bold text-gray-100 mr-2">
-                                {job.jobTitle}
+                                {job.title}
                               </h3>
                             </div>
                             <div className="flex flex-wrap gap-x-4 gap-y-2 mb-3">
@@ -500,15 +450,12 @@ const Page: React.FC = () => {
                                 <Building className="h-4 w-4 text-gray-400" />
                                 <span>{job.company}</span>
                               </p>
-                              <p className="flex items-center gap-2 text-sm text-gray-300">
-                                <MapIcon className="h-4 w-4 text-gray-400" />
-                                <span>{job.ort}</span>
-                              </p>
-                              {job.gehalt && (
+
+                              {job.payment && (
                                 <p className="flex items-center gap-2 text-sm text-gray-300">
                                   <DollarSign className="h-4 w-4 text-gray-400" />
                                   <span className="text-purple-400 font-medium">
-                                    {job.gehalt}
+                                    {job.payment}
                                   </span>
                                 </p>
                               )}
@@ -560,7 +507,7 @@ const Page: React.FC = () => {
                                 variant="outline"
                                 className="text-xs bg-gray-900/50 text-gray-300 border-gray-700"
                               >
-                                {job.type}
+                                {job.JobType}
                               </Badge>
                             </div>
                           </div>
