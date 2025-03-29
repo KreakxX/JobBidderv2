@@ -1,9 +1,10 @@
 export interface JobOffer{
-  description: string,
   title: string,
   company: string,
+  url: string,
   payment: number,
   JobType: boolean,
-  url: string,
+  description: string,
+
 
 }

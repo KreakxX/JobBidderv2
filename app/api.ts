@@ -1,4 +1,5 @@
 import axios from "axios";
+import { JobOffer } from "./JobOffer";
 
 
 const api = axios.create({
@@ -18,7 +19,16 @@ export const scrapeJobsFromIndeed = async(title: string, ort: string) =>{
 
 export const automaticallyApplyForJob = async() =>{
   try{
-    const response = await api.post("/automatically/apply/Job")
+   await api.post("/automatically/apply/Job")
+  }catch(error){
+    console.log(error);
+    throw error;
+  }
+}
+
+export const downloadAllJobLinks = async(jobs: JobOffer[]) =>{
+  try{
+    await api.post("/download/all/links",jobs)
   }catch(error){
     console.log(error);
     throw error;
