@@ -43,8 +43,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { JobOffer } from "./JobOffer";
 import {
-  automaticallyApplyForJob,
   downloadAllJobLinks,
+  downloadJobsFromLinkedIn,
   scrapeJobsFromIndeed,
 } from "./api";
 
@@ -73,8 +73,10 @@ const Page: React.FC = () => {
     try {
       setIsLoading(true);
       const response = await scrapeJobsFromIndeed(jobName, jobLocation);
-      setScrappedJobs(response);
-      setResultCount(response.length);
+      const response2 = await downloadJobsFromLinkedIn(jobName, jobLocation);
+      const combinedResponse = [...response, ...response2];
+      setScrappedJobs(combinedResponse);
+      setResultCount(combinedResponse.length);
     } catch (error) {
       console.log(error);
     } finally {

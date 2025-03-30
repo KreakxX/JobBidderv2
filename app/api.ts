@@ -17,18 +17,19 @@ export const scrapeJobsFromIndeed = async(title: string, ort: string) =>{
   }
 }
 
-export const automaticallyApplyForJob = async() =>{
+export const downloadAllJobLinks = async(jobs: JobOffer[]) =>{
   try{
-   await api.post("/automatically/apply/Job")
+    await api.post("/download/all/links",jobs)
   }catch(error){
     console.log(error);
     throw error;
   }
 }
 
-export const downloadAllJobLinks = async(jobs: JobOffer[]) =>{
+export const downloadJobsFromLinkedIn = async(title: string, ort: string) =>{
   try{
-    await api.post("/download/all/links",jobs)
+    const response = await api.post("/scrapeJobsFromLinkedIn", {title, ort})
+    return response.data;
   }catch(error){
     console.log(error);
     throw error;

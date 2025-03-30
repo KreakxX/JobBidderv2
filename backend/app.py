@@ -50,32 +50,53 @@ def downloadAllJobLinks(jobs: List[Job]):
                file.write(url + '\n')
 
 
-def scrappeFromLinkedIn():
+def scrappeFromLinkedIn(title: str, ort: str):
     jobs = []
     driver = uc.Chrome(use_subprocess=False)
-    driver.get("https://www.linkedin.com/jobs/search?keywords=python%20entwickler&location=Vereinigte%20Staaten%20von%20Amerika&geoId=&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0")
+    driver.get(f"https://www.linkedin.com/jobs/search?keywords={title}&location={ort}&geoId=&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0")
     print(driver.current_url)
-    time.sleep(8)
+    time.sleep(5)
     driver.execute_script("document.elementFromPoint(100, 100).click();")
     try:
       button = driver.find_element(By.CSS_SELECTOR, "button.modal__dismiss[aria-label='Verwerfen']")
       button.click()
     except:
         print("Error")
+
     elements = driver.find_elements(By.CSS_SELECTOR,"div.base-card.relative.w-full")
     for element in elements:
-        title = element.find_element(By.CSS_SELECTOR,".base-search-card__title").text
-        description = element.find_element(By.CSS_SELECTOR,".hidden-nested-link").text
-        description2 = element.find_element(By.CSS_SELECTOR,".job-search-card__location").text
-        print(description)
-        print(description2)
-        print(title)
-        x = job(title, description2, url, "Unknown", JobType, description)
+        try:
+            title = element.find_element(By.CSS_SELECTOR,".base-search-card__title").text
+        except:
+            title  = "Unknown"
+
+        try:
+            company = element.find_element(By.CSS_SELECTOR,".hidden-nested-link").text
+        except: 
+            company = "Unknown"
+
+        try:
+            url = element.find_element(By.CSS_SELECTOR, "a[data-tracking-control-name='public_jobs_jserp-result_search-card']").get_attribute("href")
+        except:
+            url = "Unknown"
+        
+        time.sleep(1)
+        element.click()
+        time.sleep(3) 
+        try:
+            description_element = driver.find_element(By.CSS_SELECTOR, ".show-more-less-html__markup.relative.overflow-hidden")
+            description = description_element.text
+            print(description)
+        except:
+            print("Could not find description element")
+
+        x = job(title, company, url, "Unknown", "Unknown", description)
         jobs.append(x)
-    time.sleep(100)
+    time.sleep(50)
     y = Cached(jobs, "title", "ort")
     cache.append(y)
     driver.quit() 
+    return jobs
 
 def scrappeFromIndeed(title: str, ort: str):
     jobs = []
@@ -132,22 +153,7 @@ def scrappeFromIndeed(title: str, ort: str):
     driver.quit()
     return jobs
  
- 
-@app.post("/ScrappeJobsFromIndeed")
-def ScrappeJobsFromIndeed(request: jobRequest):
-    for x in cache[:]:
-       if (x.created + 800) <  int(time.time()):
-          cache.remove(x)
-    for x in cache:
-        print(x.title)
-        print(x.ort)
-        print(cache)
-        if x.title == request.title and x.ort == request.ort:
-            return x.arr
-    return scrappeFromIndeed(request.title, request.ort)
 
- 
- 
 @app.post("/ScrappeJobsFromIndeed")
 def ScrappeJobsFromIndeed(request: jobRequest):
     for x in cache[:]:
@@ -167,9 +173,21 @@ def ScrappeJobsFromIndeed(request: jobRequest):
 def downloadAllLinks(jobs: List[Job]):
    downloadAllJobLinks(jobs);
 
-@app.get("/scrapeJobsFromLinkedIn")
-def ScrapeJobsFromLinkedIn():
-    scrappeFromLinkedIn()
+@app.post("/scrapeJobsFromLinkedIn")
+def ScrapeJobsFromLinkedIn(request: jobRequest):
+    for x in cache[:]:
+       if (x.created + 1200) <  int(time.time()):
+          cache.remove(x)
+    for x in cache:
+        print(x.title)
+        print(x.ort)
+        print(cache)
+        if x.title == request.title and x.ort == request.ort:
+            return x.arr
+    return scrappeFromLinkedIn(request.title, request.ort)
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
+
+
+#TODO Clicking on Job From Linkedin to get the full description 
