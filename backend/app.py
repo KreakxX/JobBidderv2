@@ -9,6 +9,7 @@ from job import job
 from typing import List
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.action_chains import ActionChains
+from docx import Document
 
 
 
@@ -39,6 +40,59 @@ class Job(BaseModel):
    JobType: str
    description: str
 
+
+def generatePerfectResume():
+    template_path = 'backend/templates/LebensLaufVorlage.docx'
+    document = Document(template_path)
+    placeHolderVorname = '[[Vorname]]'
+    placeHolderNachname = '[[Nachname]]'
+    placeHolderBirthDay  = '[[BirthDate]]'
+    placeHolderBirthplace = '[[Birthplace]]'
+    placeHolderNationality = '[[Nationality]]'
+    placeHolderMaritalStatus = '[[Marital Status]]'
+    placeHolderEducationDate1 = '[[Date 1]]'
+    placeHolderEducationDate2 = '[[Date 2]]'
+    placeHolderEducationDate3 = '[[Date 3]]'
+    placeHolderTrainingDate1 = '[[Date 4]]'
+    placeHolderTrainingDate2 = '[[Date 5]]'
+    placeHolderTrainingDate3 = '[[Date 6]]'
+    placeHolderEducation1 = '[[Education 1]]'
+    placeHolderEducation2 = '[[Education 2]]'
+    placeHolderEducation3 = '[[Education 3]]'
+    placeHolderTraining1 = '[[Training 1]]'
+    placeHolderTraining2 = '[[Training 2]]'
+    placeHolderTraining3 = '[[Training 3]]'
+    placeHolderLanguage1 = '[[Language 1]]'
+    placeHolderLanguage2 = '[[Language 2]]'
+    placeHolderLanguage3 = '[[Language 3]]'
+    placeHolderProgramming1 = '[[Programming 1]]'
+    placeHolderProgramming2 = '[[Programming 2]]'
+    placeHolderProgramming3 = '[[Programming 3]]'
+    placeHolderProgramming4 = '[[Programming 4]]'
+    placeHolderProgramming5 = '[[Programming 5]]'
+    placeHolderProgramming6 = '[[Programming 6]]'
+    placeHolderProgramming7 = '[[Programming 7]]'
+    placeHolderProgramming8 = '[[Programming 8]]'
+    placeHolderProgramming9 = '[[Programming 9]]'
+    placeHolderDatum = '[[Datum]]'
+    placeHolderOrt = '[[Ort]]'
+
+    vorname = "Henrik"
+    nachName = "Standke"
+    birthDay = "11.08.2008"
+    birthPlace = "Berlin, Germany"
+    Nationality = "German"
+    Status = "None"
+
+    for p in document.paragraphs:
+        if placeHolderVorname in p.text:
+            p.text = p.text.replace(placeHolderVorname, vorname)
+        if placeHolderNachname in p.text:
+            p.text = p.text.replace(placeHolderNachname, nachName)
+    
+    document.save(f"GenerateLebenslauf_{vorname}.docx")
+
+
 def downloadAllJobLinks(jobs: List[Job]):
     urls = []
     for job in jobs:
@@ -51,6 +105,7 @@ def downloadAllJobLinks(jobs: List[Job]):
 
 
 def scrappeFromLinkedIn(title: str, ort: str):
+    print("Geht")
     jobs = []
     driver = uc.Chrome(use_subprocess=False)
     driver.get(f"https://www.linkedin.com/jobs/search?keywords={title}&location={ort}&geoId=&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0")
@@ -62,7 +117,16 @@ def scrappeFromLinkedIn(title: str, ort: str):
       button.click()
     except:
         print("Error")
-
+    last_height = driver.execute_script("return document.body.scrollHeight")
+    while True:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(1)
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            break
+        last_height = new_height
+        driver.execute_script("window.scrollTo(0, 0);")
+    
     elements = driver.find_elements(By.CSS_SELECTOR,"div.base-card.relative.w-full")
     for element in elements:
         try:
@@ -82,7 +146,7 @@ def scrappeFromLinkedIn(title: str, ort: str):
         
         time.sleep(1)
         element.click()
-        time.sleep(3) 
+        time.sleep(2) 
         try:
             description_element = driver.find_element(By.CSS_SELECTOR, ".show-more-less-html__markup.relative.overflow-hidden")
             description = description_element.text
@@ -92,7 +156,7 @@ def scrappeFromLinkedIn(title: str, ort: str):
 
         x = job(title, company, url, "Unknown", "Unknown", description)
         jobs.append(x)
-    time.sleep(50)
+    time.sleep(2)
     y = Cached(jobs, "title", "ort")
     cache.append(y)
     driver.quit() 
@@ -116,7 +180,7 @@ def scrappeFromIndeed(title: str, ort: str):
             url = element.find_element(By.CSS_SELECTOR,"a[data-jk]").get_attribute("href")
             time.sleep(1)
             element.click()
-            time.sleep(3)
+            time.sleep(1.5)
             try:
                 newElement = driver.find_element(By.CSS_SELECTOR, ".jobsearch-JobComponent.css-1kw92ky.eu4oa1w0")
             except Exception as e:
@@ -142,14 +206,14 @@ def scrappeFromIndeed(title: str, ort: str):
          nextpage = driver.find_element(By.CSS_SELECTOR, 'a[data-testid="pagination-page-next"]')
          if nextpage:
             nextpage.click()
-            time.sleep(4)
+            time.sleep(3)
       except Exception as e:
          notatend = False   
          
 
     y = Cached(jobs, title, ort)
     cache.append(y)
-    time.sleep(20)  
+    time.sleep(2)  
     driver.quit()
     return jobs
  
@@ -173,17 +237,12 @@ def ScrappeJobsFromIndeed(request: jobRequest):
 def downloadAllLinks(jobs: List[Job]):
    downloadAllJobLinks(jobs);
 
+@app.get("/generate/perfect/Resume")
+def GeneratePerfectResume():
+    generatePerfectResume()
+
 @app.post("/scrapeJobsFromLinkedIn")
 def ScrapeJobsFromLinkedIn(request: jobRequest):
-    for x in cache[:]:
-       if (x.created + 1200) <  int(time.time()):
-          cache.remove(x)
-    for x in cache:
-        print(x.title)
-        print(x.ort)
-        print(cache)
-        if x.title == request.title and x.ort == request.ort:
-            return x.arr
     return scrappeFromLinkedIn(request.title, request.ort)
 
 if __name__ == "__main__":

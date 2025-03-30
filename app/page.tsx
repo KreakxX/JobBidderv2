@@ -141,39 +141,6 @@ const Page: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex justify-center mb-6">
-              <div className="grid grid-cols-2 gap-8">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="Indeed"
-                    checked={stepstone}
-                    onCheckedChange={setStepstone}
-                    className="data-[state=checked]:bg-purple-600"
-                  />
-                  <Label
-                    htmlFor="Indeed"
-                    className="text-sm font-medium text-gray-300"
-                  >
-                    Indeed
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="LinkedIn"
-                    checked={xing}
-                    onCheckedChange={setXing}
-                    className="data-[state=checked]:bg-purple-600"
-                  />
-                  <Label
-                    htmlFor="LinkedIn"
-                    className="text-sm font-medium text-gray-300"
-                  >
-                    LinkedIn
-                  </Label>
-                </div>
-              </div>
-            </div>
-
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button
                 onClick={scrapeJobs}
