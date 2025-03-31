@@ -40,57 +40,95 @@ class Job(BaseModel):
    JobType: str
    description: str
 
+class ResumeRequest(BaseModel):
+    vorname: str
+    nachname: str
+    Birtday: str
+    BirthPlace: str
+    Nationality: str
+    marital: str
+    educationDate1: str
+    educationDate2: str
+    educationDate3: str
+    trainingDate1: str
+    trainingDate2: str
+    trainingDate3: str
+    education1: str
+    education2: str
+    education3: str
+    training1: str
+    training2: str
+    training3: str
+    language1: str
+    language2: str
+    language3: str
+    programming1: str
+    programming2: str
+    programming3: str
+    programming4: str
+    programming5: str
+    programming6: str
+    programming7: str
+    programming8: str
+    programming9: str
+    datum: str
+    ort: str
 
-def generatePerfectResume():
+
+
+
+
+def generatePerfectResume(request: ResumeRequest):
     template_path = 'backend/templates/LebensLaufVorlage.docx'
     document = Document(template_path)
-    placeHolderVorname = '[[Vorname]]'
-    placeHolderNachname = '[[Nachname]]'
-    placeHolderBirthDay  = '[[BirthDate]]'
-    placeHolderBirthplace = '[[Birthplace]]'
-    placeHolderNationality = '[[Nationality]]'
-    placeHolderMaritalStatus = '[[Marital Status]]'
-    placeHolderEducationDate1 = '[[Date 1]]'
-    placeHolderEducationDate2 = '[[Date 2]]'
-    placeHolderEducationDate3 = '[[Date 3]]'
-    placeHolderTrainingDate1 = '[[Date 4]]'
-    placeHolderTrainingDate2 = '[[Date 5]]'
-    placeHolderTrainingDate3 = '[[Date 6]]'
-    placeHolderEducation1 = '[[Education 1]]'
-    placeHolderEducation2 = '[[Education 2]]'
-    placeHolderEducation3 = '[[Education 3]]'
-    placeHolderTraining1 = '[[Training 1]]'
-    placeHolderTraining2 = '[[Training 2]]'
-    placeHolderTraining3 = '[[Training 3]]'
-    placeHolderLanguage1 = '[[Language 1]]'
-    placeHolderLanguage2 = '[[Language 2]]'
-    placeHolderLanguage3 = '[[Language 3]]'
-    placeHolderProgramming1 = '[[Programming 1]]'
-    placeHolderProgramming2 = '[[Programming 2]]'
-    placeHolderProgramming3 = '[[Programming 3]]'
-    placeHolderProgramming4 = '[[Programming 4]]'
-    placeHolderProgramming5 = '[[Programming 5]]'
-    placeHolderProgramming6 = '[[Programming 6]]'
-    placeHolderProgramming7 = '[[Programming 7]]'
-    placeHolderProgramming8 = '[[Programming 8]]'
-    placeHolderProgramming9 = '[[Programming 9]]'
-    placeHolderDatum = '[[Datum]]'
-    placeHolderOrt = '[[Ort]]'
+    
+    placeholders = {
+        '[[Vorname]]': request.vorname,
+        '[[Nachname]]': request.nachname,
+        '[[BirthDate]]': request.Birtday,
+        '[[Birthplace]]': request.BirthPlace,
+        '[[Nationality]]': request.Nationality,
+        '[[Marital Status]]': request.marital,
+        '[[Date 1]]': request.educationDate1,
+        '[[Date 2]]': request.educationDate2,
+        '[[Date 3]]': request.educationDate3,
+        '[[Date 4]]': request.trainingDate1,
+        '[[Date 5]]': request.trainingDate2,
+        '[[ Date 6]]': request.trainingDate3,
+        '[[Education 1]]': request.education1,
+        '[[Education 2]]': request.education2,
+        '[[Education 3]]': request.education3,
+        '[[Training 1]]': request.training1,
+        '[[Training 2]]': request.training2,
+        '[[Training 3]]': request.training3,
+        '[[Language 1]]': request.language1,
+        '[[Language 2]]': request.language2,
+        '[[Language 3]]': request.language3,
+        '[[Programming 1]]': request.programming1,
+        '[[Programming 2]]': request.programming2,
+        '[[Programming 3]]': request.programming3,
+        '[[Programming 4]]': request.programming4,
+        '[[Programming 5]]': request.programming5,
+        '[[Programming 6]]': request.programming6,
+        '[[Programming 7]]': request.programming7,
+        '[[Programming 8]]': request.programming8,
+        '[[Programming 9]]': request.programming9,
+        '[[Datum]]': request.datum,
+        '[[Ort]]': request.ort,
+    }
 
-    vorname = "Henrik"
-    nachName = "Standke"
-    birthDay = "11.08.2008"
-    birthPlace = "Berlin, Germany"
-    Nationality = "German"
-    Status = "None"
 
     for p in document.paragraphs:
-        if placeHolderVorname in p.text:
-            p.text = p.text.replace(placeHolderVorname, vorname)
-        if placeHolderNachname in p.text:
-            p.text = p.text.replace(placeHolderNachname, nachName)
+        for placeholder, value in placeholders.items():
+            if placeholder in p.text:
+             if(value == "None"):
+                 p.text = p.text.replace(placeholder, "")
+             else:
+                p.text = p.text.replace(placeholder, value)
+
+        
     
-    document.save(f"GenerateLebenslauf_{vorname}.docx")
+    document.save(f"GenerateLebenslauf_{request.vorname}.docx")
 
 
 def downloadAllJobLinks(jobs: List[Job]):
@@ -157,7 +195,7 @@ def scrappeFromLinkedIn(title: str, ort: str):
         x = job(title, company, url, "Unknown", "Unknown", description)
         jobs.append(x)
     time.sleep(2)
-    y = Cached(jobs, "title", "ort")
+    y = Cached(jobs, title, ort)
     cache.append(y)
     driver.quit() 
     return jobs
@@ -172,15 +210,17 @@ def scrappeFromIndeed(title: str, ort: str):
     print(driver.title)
     notatend = True
     while notatend :
+      if len(jobs) > 80:
+          notatend = False
+          break
       elements = driver.find_elements(By.CSS_SELECTOR,".cardOutline.tapItem.dd-privacy-allow.result")
     
       for element in elements:
             Jobtitle = element.find_element(By.CSS_SELECTOR,"h2.jobTitle span").text
             company = element.find_element(By.CSS_SELECTOR,"span[data-testid='company-name']").text
             url = element.find_element(By.CSS_SELECTOR,"a[data-jk]").get_attribute("href")
-            time.sleep(1)
             element.click()
-            time.sleep(1.5)
+            time.sleep(2.5)
             try:
                 newElement = driver.find_element(By.CSS_SELECTOR, ".jobsearch-JobComponent.css-1kw92ky.eu4oa1w0")
             except Exception as e:
@@ -221,7 +261,7 @@ def scrappeFromIndeed(title: str, ort: str):
 @app.post("/ScrappeJobsFromIndeed")
 def ScrappeJobsFromIndeed(request: jobRequest):
     for x in cache[:]:
-       if (x.created + 1200) <  int(time.time()):
+       if (x.created + 2200) <  int(time.time()):
           cache.remove(x)
     for x in cache:
         print(x.title)
@@ -237,16 +277,24 @@ def ScrappeJobsFromIndeed(request: jobRequest):
 def downloadAllLinks(jobs: List[Job]):
    downloadAllJobLinks(jobs);
 
-@app.get("/generate/perfect/Resume")
-def GeneratePerfectResume():
-    generatePerfectResume()
+@app.post("/generate/perfect/Resume")
+def GeneratePerfectResume(request: ResumeRequest):
+    generatePerfectResume(request)
 
 @app.post("/scrapeJobsFromLinkedIn")
 def ScrapeJobsFromLinkedIn(request: jobRequest):
+    for x in cache[:]:
+       if (x.created + 2200) <  int(time.time()):
+          cache.remove(x)
+    for x in cache:
+        print(x.title)
+        print(x.ort)
+        print(cache)
+        if x.title == request.title and x.ort == request.ort:
+            return x.arr
     return scrappeFromLinkedIn(request.title, request.ort)
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
 
 
-#TODO Clicking on Job From Linkedin to get the full description 
