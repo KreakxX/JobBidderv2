@@ -12,10 +12,10 @@ from selenium.webdriver.common.action_chains import ActionChains
 from docx import Document
 
 
-
 app = FastAPI()
 
-cache = []
+cache_LinkedIn = []
+cache_Indeed = []
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,12 +25,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from Cached import Cached
+class Cached: 
+    def __init__(self, arr: List[job], title: str, ort: str):
+        self.arr = arr
+        self.title = title
+        self.ort = ort
+        self.created = int(time.time())
 
 class jobRequest(BaseModel):
    title: str
    ort: str
-
 
 class Job(BaseModel):
    title: str
@@ -117,7 +121,6 @@ def generatePerfectResume(request: ResumeRequest):
         '[[Ort]]': request.ort,
     }
 
-
     for p in document.paragraphs:
         for placeholder, value in placeholders.items():
             if placeholder in p.text:
@@ -142,19 +145,45 @@ def downloadAllJobLinks(jobs: List[Job]):
                file.write(url + '\n')
 
 
+
 def scrappeFromLinkedIn(title: str, ort: str):
     print("Geht")
     jobs = []
-    driver = uc.Chrome(use_subprocess=False)
+    driver = uc.Chrome(version_main=134, use_subprocess=False)
     driver.get(f"https://www.linkedin.com/jobs/search?keywords={title}&location={ort}&geoId=&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0")
     print(driver.current_url)
     time.sleep(5)
+    
     driver.execute_script("document.elementFromPoint(100, 100).click();")
     try:
       button = driver.find_element(By.CSS_SELECTOR, "button.modal__dismiss[aria-label='Verwerfen']")
       button.click()
     except:
         print("Error")
+    time.sleep(2)
+    try:
+      button2 = driver.find_element(By.CSS_SELECTOR, 'button[data-tracking-control-name="public_jobs_f_WT"]')
+      button2.click()
+      time.sleep(1)
+      button5 = driver.find_element(By.XPATH, "//button[@class='filter__submit-button']")
+      button5.click()
+      time.sleep(4)
+    except:
+        print("Error 2")
+
+    try:
+      checkbox = driver.find_element(By.ID,"f_WT-2")
+      checkbox.click()
+      time.sleep(1)
+      submit_button = driver.find_element(By.CSS_SELECTOR, "button.filter__submit-button")
+      submit_button.click()
+      time.sleep(3)
+    except:
+        print("Error 3")
+    time.sleep(2)
+    ablehnen_button = driver.find_element(By.XPATH, "//button[contains(@class, 'artdeco-button--primary') and contains(text(), 'Ablehnen')]")
+    ablehnen_button.click()
+    time.sleep(1)
     last_height = driver.execute_script("return document.body.scrollHeight")
     while True:
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -167,8 +196,13 @@ def scrappeFromLinkedIn(title: str, ort: str):
     
     elements = driver.find_elements(By.CSS_SELECTOR,"div.base-card.relative.w-full")
     for element in elements:
+        if(len(jobs) > 20):
+            y = Cached(jobs, title, ort)
+            cache_LinkedIn.append(y)
+            driver.quit() 
+            return jobs;
         try:
-            title = element.find_element(By.CSS_SELECTOR,".base-search-card__title").text
+            JobTitle = element.find_element(By.CSS_SELECTOR,".base-search-card__title").text
         except:
             title  = "Unknown"
 
@@ -188,31 +222,26 @@ def scrappeFromLinkedIn(title: str, ort: str):
         try:
             description_element = driver.find_element(By.CSS_SELECTOR, ".show-more-less-html__markup.relative.overflow-hidden")
             description = description_element.text
-            print(description)
         except:
             print("Could not find description element")
 
-        x = job(title, company, url, "Unknown", "Unknown", description)
+        x = job(JobTitle, company, url, "Unknown", "Unknown", description)
         jobs.append(x)
     time.sleep(2)
     y = Cached(jobs, title, ort)
-    cache.append(y)
+    cache_LinkedIn.append(y)
     driver.quit() 
     return jobs
 
 def scrappeFromIndeed(title: str, ort: str):
     jobs = []
-    driver = uc.Chrome(use_subprocess=False)
-    driver.get(f"https://www.indeed.com/jobs?q={title}&l={ort}&from=searchOnDesktopSerp&cf-turnstile-response=0.uZjJoV5yM4swLgPLGPd53mE5oiqVJ1cTZttoxMO_mqlJDVoMQJTrBy0Jwaw2vtZhi94Gk-zQfF9r5VfDBAnwO9DCrYOxnHq_wU85AnL9WY-MSDMryoxQXgxKT1jMnf_aEuLIsDX3q13ZmDU6pl2epzPCeF6s-6BUi5lQi4gnpVrj_SwmgNZgXf9KG6aFPU9lv61OJu9K59JaioqX18aOSahiVhjlTNDrA2-DY0zyxgsPPQbDcIpfwVz1H6AGfzFFgL4X9WghWBP90JkqHiOetdemM7qBl-z7mKJne58NGtFF834OS7lGVVHJcJhE2qCVZyGdCvDDwkVNLW4c7Zw262iJEKlPyh2rte6Vlu4fLDyqAO00X6yW6YKqmMTTWw9M_25ro-bp5tEKlenKJay53pmWsYp3TS0LH_T9nYZhsmJ4bnRF3-EwofGQHziJ0QUtBoBaZR-3BB3EMBfgkztAAw8ISMSCLo-rU1685i45xHozuEhQE9t5wZ8ciDejOyZ_yg7L641_wsunQ6hjJ_Mda7y6IP3uB5F2TvO0BO0fwZ_lSjJxmvps3eNigH8fUiTnZvJr2br-kUOXvwFZnlxadAWhJ0iQoBJYWU6w56jk_kLJdNTVEXXt4IjHt-hmEbiK9yLCnV2-OYq9MGyLw9uPrKx5BTuxVMylcW4MS3jnG7N3EJizCJVEpmBXfzn21qTGwWV4c2StVGQCQ5inq5Co2DpiXtww9ko-7ZiD1Nkk8Dzot6E1nlCYKYWKtJoTwZQ48rZQai1EsayRd8GlyUvS-Qwj_9VfvUqnfH1x7A9Qn3ldycpSKW8j8NG2U_M0jbwkFc63Ps3ILDDiwyexN_Ypww.FpMTOfJ"
-    "_5GJrGOQhAx2v8A.d24cd58f703be308180c3fe29dff81a112acbef361f56718dbba5274612a51ec&vjk=c237711b18542f69")
+    driver = uc.Chrome(version_main=134, use_subprocess=False)
+    driver.get(f"https://www.indeed.com/jobs?q={title}&l=remote&fromage=1&sc=0kf%3Aattr%28DSQF7%29%3B&from=searchOnDesktopSerp")
     print(driver.current_url)
     time.sleep(10)  
     print(driver.title)
     notatend = True
     while notatend :
-      if len(jobs) > 80:
-          notatend = False
-          break
       elements = driver.find_elements(By.CSS_SELECTOR,".cardOutline.tapItem.dd-privacy-allow.result")
     
       for element in elements:
@@ -220,7 +249,7 @@ def scrappeFromIndeed(title: str, ort: str):
             company = element.find_element(By.CSS_SELECTOR,"span[data-testid='company-name']").text
             url = element.find_element(By.CSS_SELECTOR,"a[data-jk]").get_attribute("href")
             element.click()
-            time.sleep(2.5)
+            time.sleep(2.8)
             try:
                 newElement = driver.find_element(By.CSS_SELECTOR, ".jobsearch-JobComponent.css-1kw92ky.eu4oa1w0")
             except Exception as e:
@@ -252,25 +281,36 @@ def scrappeFromIndeed(title: str, ort: str):
          
 
     y = Cached(jobs, title, ort)
-    cache.append(y)
+    cache_Indeed.append(y)
     time.sleep(2)  
     driver.quit()
     return jobs
  
+@app.post("/scrapeJobsFromLinkedIn")
+def ScrapeJobsFromLinkedIn(request: jobRequest):
+    for x in cache_LinkedIn[:]:
+        if (x.created + 8200) <  int(time.time()):
+            cache_LinkedIn.remove(x)
+    for x in cache_LinkedIn[:]:
+        print(x.title)
+        print(x.ort)
+        print(x.arr)
+        if x.title.lower() == request.title.lower() and x.ort.lower() == request.ort.lower():
+            return x.arr
+    return scrappeFromLinkedIn(request.title, request.ort)
 
 @app.post("/ScrappeJobsFromIndeed")
 def ScrappeJobsFromIndeed(request: jobRequest):
-    for x in cache[:]:
-       if (x.created + 2200) <  int(time.time()):
-          cache.remove(x)
-    for x in cache:
+    for x in cache_Indeed[:]:
+        if (x.created + 8200) <  int(time.time()):
+            cache_Indeed.remove(x)
+    for x in cache_Indeed[:]:
         print(x.title)
         print(x.ort)
-        print(cache)
-        if x.title == request.title and x.ort == request.ort:
+        print(x.arr)
+        if x.title.lower() == request.title.lower() and x.ort.lower() == request.ort.lower():
             return x.arr
     return scrappeFromIndeed(request.title, request.ort)
-
 
 
 @app.post("/download/all/links")
@@ -281,18 +321,7 @@ def downloadAllLinks(jobs: List[Job]):
 def GeneratePerfectResume(request: ResumeRequest):
     generatePerfectResume(request)
 
-@app.post("/scrapeJobsFromLinkedIn")
-def ScrapeJobsFromLinkedIn(request: jobRequest):
-    for x in cache[:]:
-       if (x.created + 2200) <  int(time.time()):
-          cache.remove(x)
-    for x in cache:
-        print(x.title)
-        print(x.ort)
-        print(cache)
-        if x.title == request.title and x.ort == request.ort:
-            return x.arr
-    return scrappeFromLinkedIn(request.title, request.ort)
+
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)

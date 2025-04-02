@@ -1059,7 +1059,7 @@ const Page: React.FC = () => {
                                     rel="noopener noreferrer"
                                   >
                                     <ExternalLink className="mr-2 h-4 w-4" />
-                                    View Job
+                                    Apply for Job
                                   </a>
                                 </Button>
                               </div>
