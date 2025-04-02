@@ -66,6 +66,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const Page: React.FC = () => {
   const [jobName, setJobName] = useState<string>("");
@@ -113,6 +114,8 @@ const Page: React.FC = () => {
   const [programming9, setProgramming9] = useState<string>("");
   const [datum, setDatum] = useState<string>("");
   const [ort, setOrt] = useState<string>("");
+  const [indeed, setIndeed] = useState<boolean>();
+  const [linkendIn, setLinkedIn] = useState<boolean>();
 
   const toggleDescription = (index: number) => {
     setExpandedJobs((prevState) => ({
@@ -124,9 +127,11 @@ const Page: React.FC = () => {
   const scrapeJobs = async () => {
     try {
       setIsLoading(true);
-      const response = await scrapeJobsFromIndeed(jobName, jobLocation);
-      const response2 = await downloadJobsFromLinkedIn(jobName, jobLocation);
-      const combinedResponse = [...response, ...response2];
+      let indeedJobs = [];
+      let linkedInJobs = [];
+      indeedJobs = await scrapeJobsFromIndeed(jobName, jobLocation);
+      linkedInJobs = await downloadJobsFromLinkedIn(jobName, jobLocation);
+      const combinedResponse = [...indeedJobs, ...linkedInJobs];
       setScrappedJobs(combinedResponse);
       setResultCount(combinedResponse.length);
     } catch (error) {
@@ -795,6 +800,7 @@ const Page: React.FC = () => {
                 )}
               </Button>
             </div>
+            <div className="flex justify-center mt-5"></div>
           </div>
         </div>
       </section>

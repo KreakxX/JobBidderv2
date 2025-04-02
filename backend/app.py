@@ -80,8 +80,6 @@ class ResumeRequest(BaseModel):
 
 
 
-
-
 def generatePerfectResume(request: ResumeRequest):
     template_path = 'backend/templates/LebensLaufVorlage.docx'
     document = Document(template_path)
@@ -150,7 +148,7 @@ def scrappeFromLinkedIn(title: str, ort: str):
     print("Geht")
     jobs = []
     driver = uc.Chrome(version_main=134, use_subprocess=False)
-    driver.get(f"https://www.linkedin.com/jobs/search?keywords={title}&location={ort}&geoId=&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0")
+    driver.get(f"https://www.linkedin.com/jobs/search?keywords={title}&location={ort}&f_TPR=r86400&f_WT=2&geoId=&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0")
     print(driver.current_url)
     time.sleep(5)
     
@@ -160,26 +158,6 @@ def scrappeFromLinkedIn(title: str, ort: str):
       button.click()
     except:
         print("Error")
-    time.sleep(2)
-    try:
-      button2 = driver.find_element(By.CSS_SELECTOR, 'button[data-tracking-control-name="public_jobs_f_WT"]')
-      button2.click()
-      time.sleep(1)
-      button5 = driver.find_element(By.XPATH, "//button[@class='filter__submit-button']")
-      button5.click()
-      time.sleep(4)
-    except:
-        print("Error 2")
-
-    try:
-      checkbox = driver.find_element(By.ID,"f_WT-2")
-      checkbox.click()
-      time.sleep(1)
-      submit_button = driver.find_element(By.CSS_SELECTOR, "button.filter__submit-button")
-      submit_button.click()
-      time.sleep(3)
-    except:
-        print("Error 3")
     time.sleep(2)
     ablehnen_button = driver.find_element(By.XPATH, "//button[contains(@class, 'artdeco-button--primary') and contains(text(), 'Ablehnen')]")
     ablehnen_button.click()
